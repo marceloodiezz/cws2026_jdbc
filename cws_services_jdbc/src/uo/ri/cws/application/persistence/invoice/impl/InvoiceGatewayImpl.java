@@ -6,6 +6,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -79,6 +81,47 @@ public class InvoiceGatewayImpl implements InvoiceGateway {
     @Override
     public List<InvoiceRecord> findAll() throws PersistenceException {
         throw new NotYetImplementedException();
+    }
+    
+    @Override
+    public List<EligibleInvoiceRecord> findEligibleForVoucher() throws PersistenceException {
+    	Connection c = Jdbc.getCurrentConnection();
+    	
+        List<EligibleInvoiceRecord> eligibleInvoices = new ArrayList<>();
+        
+        try (PreparedStatement pst = c.prepareStatement(Queries.getSQLSentence("TINVOICES_FINDELIGIBLEFORVOUCHER"))) {
+            try (ResultSet rs = pst.executeQuery()) {
+                while(rs.next()) {
+                	EligibleInvoiceRecord r = new EligibleInvoiceRecord();
+                	r.clientId = rs.getString("client_id");
+                	r.invoiceId = rs.getString("invoice_id");
+                	eligibleInvoices.add(r);
+                }
+            }
+            
+            return eligibleInvoices;
+        } catch (SQLException e) {
+            throw new PersistenceException(e);
+        }
+    }
+    
+    @Override
+    public void markAsUsedForVoucher(String id) throws PersistenceException {
+    	Connection c = Jdbc.getCurrentConnection();
+    	
+    	try (PreparedStatement pst = c.prepareStatement(Queries.getSQLSentence("TINVOICES_MARKASUSEDFORVOUCHER"))) {
+    		pst.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
+            pst.setString(2, id);
+            
+            int rows = pst.executeUpdate();
+            
+            if (rows != 1) {
+                throw new PersistenceException("Could not mark invoice as used for voucher: " + id);
+            }
+            
+        } catch (SQLException e) {
+            throw new PersistenceException(e);
+        }
     }
     
 }

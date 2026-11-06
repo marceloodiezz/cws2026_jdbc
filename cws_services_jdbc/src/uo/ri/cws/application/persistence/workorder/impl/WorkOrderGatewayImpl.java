@@ -5,6 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -125,5 +127,48 @@ public class WorkOrderGatewayImpl implements WorkOrderGateway {
     public List<WorkOrderRecord> findAll() throws PersistenceException {
         throw new NotYetImplementedException();
     }
+
+
+	@Override
+	public List<EligibleWorkOrderRecord> findEligibleForVoucher() throws PersistenceException {
+		Connection c = Jdbc.getCurrentConnection();
+    	
+        List<EligibleWorkOrderRecord> eligibleWorkorders = new ArrayList<>();
+        
+        try (PreparedStatement pst = c.prepareStatement(Queries.getSQLSentence("TWORKORDERS_FINDAVAILABLEFORVOUCHER"))) {
+            try (ResultSet rs = pst.executeQuery()) {
+                while(rs.next()) {
+                	EligibleWorkOrderRecord r = new EligibleWorkOrderRecord();
+                	r.clientId = rs.getString("client_id");
+                	r.workorderId = rs.getString("workorder_id");
+                	eligibleWorkorders.add(r);
+                }
+            }
+            
+            return eligibleWorkorders;
+        } catch (SQLException e) {
+            throw new PersistenceException(e);
+        }
+	}
+
+
+	@Override
+	public void markAsUsedForVoucher(String id) throws PersistenceException {
+		Connection c = Jdbc.getCurrentConnection();
+    	
+    	try (PreparedStatement pst = c.prepareStatement(Queries.getSQLSentence("TWORKORDERS_MARKASUSEDFORVOUCHER"))) {
+    		pst.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
+            pst.setString(2, id);
+            
+            int rows = pst.executeUpdate();
+            
+            if (rows != 1) {
+                throw new PersistenceException("Could not mark workorder as used for voucher: " + id);
+            }
+            
+        } catch (SQLException e) {
+            throw new PersistenceException(e);
+        }
+	}
     
 }

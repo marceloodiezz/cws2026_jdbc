@@ -47,4 +47,13 @@ public interface WorkOrderGateway extends Gateway<WorkOrderGateway.WorkOrderReco
         
     }
     
+    List<EligibleWorkOrderRecord> findEligibleForVoucher() throws PersistenceException;
+    
+    void markAsUsedForVoucher(String id) throws PersistenceException;
+    
+    public class EligibleWorkOrderRecord {
+        public String workorderId;
+        public String clientId;
+    }
+    
 }
